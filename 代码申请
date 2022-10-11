@@ -1,0 +1,5 @@
+1.进入holo Family -->  CodeHub
+2.申请Repo权限
+3.申请成功后，进入bitbucket
+4.选择Project，对应的文件
+5.点击左侧栏第一个复制ssh，在相应的文件夹下git clone “ssh网址”

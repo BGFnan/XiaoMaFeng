@@ -1,0 +1,224 @@
+
+问题：二进制文件后缀是什么？  动态库、静态库是什么？   脚本是什么？
+
+
+编译过程：预处理(做优化，生成.i文件）--> 编译器（生成.s文件）--> 汇编器(生成.o文件）--> 链接器(连接库文件和其他目标代码） --> 生成可执行文件
+
+	预处理阶段：主要完成的工作：处理#开始的预编译指令
+		（1）宏定义
+		（2）文件包含
+		（3）条件编译
+	编译器			// 检查语法，语法没有问题生成汇编代码文件
+	汇编阶段：生成汇编代码	// 把汇编代码转成机器代码(二进制代码)
+	链接器阶段：		// 将多个目标程序和库连结在一起，找到相关函数的地址填到调用的地方，生成可执行文件
+		（1）函数重载
+		（2）inline函数
+		（3）模板处理
+		（4）虚函数
+c++使用的也是c语言的单遍编译的方式，意思就是从头到尾扫描一遍源码，一边解析源码，一边即刻生成目标代码。
+
+./test告诉bash要执行的文件是当前路径下的test文件
+
+
+***************************************************************************************************************************************
+							cmakelist.txt结构
+***************************************************************************************************************************************
+
+   工程声明
+	cmake_minimum_required(VERSION 3.10)	// 声明cmake最低要求版本号
+	cmake_policy(PUSH)			// 保存默认cmake行为策略  ??
+	cmake_policy(SET CMP0028 NEW)		// 将0028号cmake行为策略设置为NEW
+
+	project(template_project_name)		// 声明一个工程,括号内是工程名称
+   
+   设置工程版本号
+	set(${PROJECT_NAME}_VERSION_MAJOR 0)	// 主版本号
+	set(${PROJECT_NAME}_VERSION_MINOR 0)	// 子版本号
+	set(${PROJECT_NAME}_VERSION_PATCH 0)	// 补丁版本号
+	set(${PROJECT_NAME}_SOVERSION ${${PROJECT_NAME}_VERSION_MAJOR}.${${PROJECT_NAME}_VERSION_MINOR})	// 库文件soname
+	set(${PROJECT_NAME}_VERSION ${${PROJECT_NAME}_SOVERSION}.${${PROJECT_NAME}_VERSION_PATCH})		// 库文件版本号字符串
+
+	if(HOLO_BUILD_VERSION)		//如果执行cmake时传递了HOLO_BUILD_VERSION参数，则将HOLO_BUILD_VERSION追加到版本号最后，版本号将包含四个字段。
+    	   set(${PROJECT_NAME}_VERSION_TWEAK)
+    	   set(${PROJECT_NAME}_VERSION ${${PROJECT_NAME}_VERSION}.${HOLO_BUILD_VERSION})
+	endif(HOLO_BUILD_VERSION)
+
+	set(PROJECT_VERSION ${${PROJECT_NAME}_VERSION})		// 工程最终版本号，和${PROJECT_NAME}_VERSION内容一致
+
+   声明工程配置开关
+	option(HOLO_BUILD_TEST     "Build unit test"          OFF)	// 是否编译测试代码
+	option(HOLO_BUILD_COVERAGE "Generate coverage report" OFF)	// 是否按照覆盖率统计模式编译
+
+   声明依赖外部目标版本
+	set(DEPEND_<PACKAGE>_VERSION 0.0.0)
+
+   设置编译器选项
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -Wno-error=deprecated-declarations")
+	set(CMAKE_CXX_STANDARD 11)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror -Wno-error=deprecated-declarations")
+	set(CMAKE_C_STANDARD 99)
+
+   设置cmake脚本搜索路径
+
+   搜索外部依赖目标
+	find_package(package ${DEPEND_<PACKAGE>_VERSION})	// package=外部依赖包 "REQUIRED"必要的,"QUIET"可选的-可以通过判断${${package}_FOUND}变量检查此外部依赖是否找到。
+
+   引用HoloMacros脚本
+
+   添加doxygen生成命令
+	GENERATE_DOXYGEN(INPUT include src)
+
+   添加覆盖率报告生成命令
+
+   添加编译目标
+	add_executable(执行文件名 xxx.cpp) or HOLO_COMPILE_APP(……)
+
+   添加测试
+	if(HOLO_BUILD_TEST)
+    	    enable_testing()
+    	    add_subdirectory(test)
+	endif(HOLO_BUILD_TEST)
+
+   安装编译结果
+
+   卸载指令
+
+   恢复cmake策略配置
+
+
+
+		****************************************************************************************************************
+		*
+		*						Cmake语法结构
+		*
+		*
+		*		PROJECT关键字
+		*		    可以用来指定工程的名字和支持的语言，默认支持所有语言
+		*		    PROJECT(工程名字 支持语言) 不写支持语言就是支持所有语言
+		*		    PROJECT_BINARY_DIR
+		*		    PROJECT_BINARY_DIR
+		*
+		*		SET关键字
+		*		    用来显示指定变量
+		*		    SET(SRC_LIST main.cpp t1.cpp)    SRC_LIST变量就包含了main.cpp等多个文件
+		*
+		*		MESSAGE关键字
+		*		    向终端输出用户自定义的信息
+		*		    主要有三种：SEND_ERROR产生错误，生成过程被跳过、
+		*			       SATUS输出前缀为-的信息，
+		*			       FATAL_ERROR立即终止所有cmake过程
+		*
+		*		ADD_EXECUTABLE关键字
+		*		    生成可执行文件
+		*		    ADD_EXECUTABLE(生成的可执行文件名 ${SRC_LIST}源文件读取变量SRC_LIST中的内容)
+		*		注：工程名和生成的可执行文件没有任何关系
+		*		    参数之间可以用分号或者空格来进行分割
+		*		    指令大小写无关，参数有关，推荐指令用全大写
+		*
+		*		一般使用外部构建，即生成的临时文件存放在build目录下
+		*		    新建build目录，cmake 路径(一般为..,上级目录) 编译的临时文件就都存在build中，
+		*		    在build中make就生成了可执行文件
+		*
+		*		ADD_SUBDIRECTORY关键字（用于工程cmake文件中）
+		*		    用于向当前工程添加存放源文件的子目录并可以指定中间二进制和目标二进制存放的位置
+		*		    ADD_SUBDIRECTORY(<source_dir> <bin_dir>) 源文件目录src   二进制文件目录bin
+		*		    EXCLUDE_FROM_ALL函数是将写的目录从编译中排除
+		*		    二进制文件如 .so文件
+		*
+		*		INSTALL关键字
+		*		    安装	CMAKE_INSTALL_PREFIX 使用CMAKE一个新的变量，修改默认安装路径用的
+		*		    INSTALL(<类型> <name可多个> DESTINATION <自定义路径>）默认在/usr/local/
+		*		    FILES	// 安装文件
+		*		    PROGRAMS	// 非目标文件的可执行程序安装，比如脚本
+		*		    DIRECTORY	// 安装目录 例注 目录名不以/结尾：这个目录被安装为目标路径下
+		*						 目录名以/结尾：将这个目录中的内容安装到目标路径下
+		*						 (需要配合安装目录下的CMakeList.txt)
+		*			cmake .. --> make --> make install
+		*
+		*		静态库和动态库的构建
+		*		   STATIC静态库：扩展名一般为 .a 或 .lib ，
+		*			   在编译时会直接整合到目标程序中，编译成功的可执行文件可独立运行
+		*
+		*		   SHARED动态库：扩展名一般为 .so 或 .dll
+		*			   在编译时不会放到连接的目标程序中，即可执行文件无法单独运行
+		*		ADD_LIBRARY关键字
+		*		    ADD_LIBRARY(库名 类型 源文件位置)
+		*			库名：正常的库名，生成的名字前面会加上lib，最终产生如libhello.so
+		*			类型：SHARED STATIC
+		*			源文件位置：${  }	// 配合SET使用
+		*
+		*		SET_TARGET_PROPERTIES关键字
+		*		    用来设置输出的名称，还可以用来指定动态库版本和API版本
+		*		    SET_TARGET_PROPERTIES(库名 PROPERTIES OUTPUT_NAME "修改后的名字")
+		*		    SET_TARGET_PROPERTIES(库名 PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+		*			会尝试清理掉其他使用过这个名字的库，因为静态库和动态库不能名字一样 
+		*		    动态库的版本号 SET_TARGET_PROPERTIES(库名 PROPERTIES VERSION 1.2 SOVERSION 1)
+		*			VERSION 指动态库版本号  SOVERSION 指API版本
+		*
+		*		安装共享库
+		*		    INSTALL(TARGETS <name> LIBRARY DESTINATION <路径> ARCHIVE DESTINATION <路径>）
+		*			注意：安装时，指定一下路径，放到系统下：cmake -DCMAKE_INSTALL_PREFIX=/urs ..
+		*
+		*		INCLUDE_DIRECTORIES(路径） 在CMakeList.txt中加入头文件搜索路径
+		*		    可解决make后头文件找不到的问题
+		*
+		*		LINK_LIBRARIES关键字
+		*		    添加非标准的共享库搜索路径  解决：找不到引用的函数问题
+		*		    LINK_LIBRARIES(路径)
+		*		TARGET_LINK_LIBRARIES关键字
+		*		    添加需要链接的共享库
+		*		    TARGET_LINK_LIBRARIES(共享库名字) 只要写出动态链接库的名字即可
+		*
+		*		<ROOT>
+		*		  ├── CMakeLists.txt
+		*		  ├── cmake		// 用于存放工程相关cmake脚本。
+		*		  ├── build		//
+		*		  ├── bin		// 用于存放工程构建后的目标文件
+		*		  ├── doc			// 用于存放工程文档.txt文件
+		*		  │   └── resources
+		*		  │       └── logo.png
+		*		  ├── include		// 存放工程头文件
+		*		  ├── src		// 存放工程源文件
+		*			└── CMakeLists.txt
+		*			└── main.cpp
+		*		  ├── COPYRIGHT		// 版权文件
+		*		  ├── README		// 
+		*		  ├── .sh文件		// 脚本文件，用来调用二进制
+		*		  ├── test		// 存放工程测试文件,他是一个独立的工程，包含cmakelist.txt脚本
+		*			└── CMakeLists.txt
+		*
+		*
+		*
+		*
+		*
+		*
+		*
+		*
+		*
+		*
+		*
+		*
+
+*******************************************************************************************************************************************************
+					Build Server 常见故障排查方法
+*******************************************************************************************************************************************************
+
+查看编译日志
+    任务详情页面->编译日志，可以查看各个工程在各个编译步骤的执行状态，找到编译错误的的工程，可以查看工程编译过程log文件。
+	log文件包括：COMMAND(编译指令），ENVIROMENT(环境变量），STDOUT(stdout信息) , RETCODE(返回值）
+查看stdout
+    在一些特殊情况下（例如配置文件错误，git clone错误等），工程编译步骤的列表中看不出错误原因，可以查看任务的完整stdout进行错误分析。
+    在摘要信息页面底部，可以看到编译过程stdout的最后若干行
+    如果从stdout的最后几行无法看到错误原因，可以在编译日志标签页下载完整的stdout日志文件
+检查配置文件
+    在编译信息页面，能够看到编译的各个工程的分支配置，以及编译时对应的commit hash		// 编译信息在bitbucket里
+    如果希望查看完整的编译配置，可以在编译信息标签页面下载完整的编译描述文件(build_spec)或编译快照文件(snapshot)
+	编译描述文件与编译快照的区别为：
+	编译快照只保存了编译任务中参与编译的工程信息，编译描述文件保存了完整的配置信息。
+
+
+
+
+
+
+	

@@ -1,0 +1,94 @@
+
+workspace中src里的各个文件夹即为不同的git仓库，用git status查看
+
+
+*****************************************************************************************************************************************************
+git使用工作流程
+*****************************************************************************************************************************************************
+
+1.代码提交
+    （1）创建分支
+
+    （2）代码修改
+	回到代码工作空间（即：通过holobuilder创建的代码工作空间）。
+	- 1）删除缓存：holobuilder clean --download holo_map_base
+	- 2）克隆代码：holobuilder init holo_planning_pilot
+	- 3）找到代码：cd 工作空间/src/holo_planning_pilot
+	- 4）切换分支：git pull && git checkout bugfix/username/xxxxxxxxx
+	- 5）修改代码：修改代码，修复Bug
+	- 6）编译测试：holobuilder build -j4 holo_planning_pilot		// -j4表示四进程
+    （3）代码提交
+	代码修改完成后，需要进行研发自测，测试结束后就可以将代码提交。
+	- 1）cd 工作空间/src/holo_planning_pilot
+	- 2）添加代码：git add ./
+	- 3）本地提交：git commit -m "Fix: xxxxxxxxx"
+	- 4）增加说明：git commit --amend
+	- 5）远程提交：git push origin bugfix/username/xxxxxxxxx
+		关于提交可读历史信息详解：提交可读的git历史 。
+    （4）申请评审
+	1）然后在工程仓库页面左上方位置点击【...】按钮，选择【Compare】
+	2）选取工作分支与目的分支，点击【Create pull request】
+	3）添加【Reviewers】，然后点击【Create】按钮，完成分支提交评审。
+
+2.代码审评
+	每个开发者都有需要同行的帮忙Review的代码，同时也需要参与同行的Review。
+3.二次修改
+	- 1）cd 工作空间/src/holo_planning_pilot
+	- 2）添加代码：git add ./
+	- 3）本地提交：git commit -m "Fix: update"
+	- 4）远程提交：git push origin bugfix/username/xxxxxxxxx
+	- 5）合并记录：git rebase -i HEAD~2 并且 将最后一条记录标记为f；
+	- 6）强制提交：git push --force origin bugfix/username/xxxxxxxxx
+
+git提交日志规范
+	Summarize what is changed #(No more than 50 characters)用一句话描述提交的摘要信息（<TAG>summary）
+	# empty line
+	WHY: #(First paragraph: list reasons why)
+	- The reason why this change is made.
+	- List each reason in one bullet item.
+	- Max 72 characters each line.
+	# empty line
+	HOW: #(Second paragraph)
+	Detailed description about what is changed.
+	NOTE:(optional)
+	# empty line
+	Relative links, notes, Co-authors
+	
+    创建git commit模板：vim ~/.git_commit_template.txt
+    应用git commit模板：git config --global commit.template ~/.git_commit_template.txt  	//??
+
+
+*************************************************************************************************************************************************
+
+1. git clone 			// 克隆git代码，将远程仓库代码下载到本地仓库
+2. git checkout "branchname"  // 切换分支
+3. git status <filename>	// 查看指定文件状态
+4. git init			// 创建git代码仓库
+5. git add .			// 将所有文件添加到暂存区
+6. git commit			// 将暂存区文件存入本地仓库	-m 提交信息
+7. git push			// 将代码从本地仓库上传到远程仓库
+8. git pull			// 将远程仓库代码同步到本地仓库
+9. git checkout			// 将本地仓库代码
+10. git blame filename		// 用来追溯一个指定文件的历史修改记录。它能显示任何文件中每行最后一次修改的提交记录		-L n1 n2 filename
+
+文件状态：
+	Untracked：未跟踪，通过git add 将状态变为 Staged
+	Unmodify：未修改：文件已入库 使用git rm 移出版本库，则变为Untracked
+	Modified：文件已修改， （1）git add 加入暂存区 or （2）git checkout 丢弃修改返回unmodify，即用库中文件覆盖当前修改
+	Staged：暂存状态，通过git commit将修改文件同步到库中，   or   git reset HEAD filename取消暂存
+
+
+
+忽略上传的配置文件 .gitignore	*.txt, !hello.txt, /temp, idea/, 
+
+生成公匙：ssh-keygen
+
+
+git分支：相当于不同版本
+	git branch	// 查看当前分支		-r 远程分支
+	git branch <branchname>		// 新建分支
+	git checkout -b		// 新建一个分支并切换到该分支
+	git merge	// 合并指定分支到当前分支
+	git branch -d <branchname> 	// 删除分支
+	删除远程分支命令目前用不到
+

@@ -1,0 +1,136 @@
+from: https://holomatic.feishu.cn/wiki/wikcnSpRaTV9sD3VPm4VLkfLeff#
+1. 新建文件夹
+2. 创建工作空间	holobuilder create -w <workspace_path>
+3. 配置workspace 
+     workspace默认编译产品为空，需要设置一下编译产品配置（编译平台不是本地，则需要交叉编译环境配置见）
+	3.1 配置编译产品	// 见下文MDC610 CM配置
+	3.2 配置编译平台 holobuilder configure --build_platform x86_64_ubuntu-18.04-mdc610-0515		// workspace默认编译平台为native(本地编译）
+	3.3 配置编译类型 holobuilder configure --build_type debug
+4. 初始化源代码 holobuilder init holo_planning_pilot
+5. 从buildserver上下载编译结果 holobuilder download --id <build_id>
+6. 编译工程 holobuilder build holo_planning_pilot
+	覆盖配置参数
+	追加配置参数
+	覆盖编译参数
+	追加编译参数
+7. 清除build文件 holobuilder clean holo_planning_pilot
+8. 清除download缓存 holobuilder clean --download holo_planning_pilot
+
+
+
+注释：cmw_app_存的是应用
+
+
+
+******************************************************************************************************************************************************
+
+配置交叉编译环境
+
+    设置交叉编译环境根目录	
+	holobuilder configure --crosstool_root <PATH>		//默认情况下，交叉编译环境根目录为${HOME}/crosstool (预留至少20G）
+
+    查询可以下载的交叉编译资源
+	holobuilder download --crosstool --id ""
+    下载默认交叉编译环境
+	holobuilder configure --build_platform <platform> 	// 配置编译目标平台<platform> = x86_64_ubuntu-18.04-mdc610-0515
+	holobuilder download --crosstool			// 下载交叉编译工具链/编译环境（Holobuilder会自动下载交叉编译资源并部署到crosstool_root中。）
+    #下载指定交叉编译资源		#不需要此步骤
+	
+	新版本交叉编译工具链下载方法
+	1 在一个编译平台配置下，下载默认资源集合
+	holobuilder download --crosstool
+	2 下载cmake交叉编译脚本
+	holobuilder download --crosstool --id package/tools/cmake/toolchain_files.tar.bz2
+
+执行进行交叉编译
+holobuilder configure --build_platform x86_64_ubuntu-18.04-mdc610-0515
+holobuilder build <projects>					// <projects> = holo_planning_pilot
+
+交叉编译器编译流程如下：
+1. 交叉编译器编译源代码工程
+2. 编译过程中如果需要依赖其他资源（第三方库，配置文件，脚本等），则需要在build machine上提前部署依赖资源(build environment)
+3. 交叉编译器编译生成在目标平台可执行的二进制文件
+4. 将编译输出的二进制文件拷贝到目标平台
+5. 二进制文件在目标平台的运行环境中运行
+
+
+
+***********************************************************************************************************************************************************
+
+
+MDC610 CM的X86版本环境构建		// 通信协议（类似于ROS）
+
+
+相关资源的准备
+    1. 配置workspace相关环境		// 用0515版本
+	holobuilder update --config  	// 更新为最新的配置
+	holobuilder configure --build_product Pilot/GH02/develop 			// 指定编译产品模板为GH02/develop
+	holobuilder configure --build_platform x86_64_ubuntu-18.04-mdc610-0515 		// 指定编译平台为ubuntu1804 0515最小系统
+    2. 相关资源的下载
+	holobuilder download --crosstool --id rootfs/ubuntu-base-18.04-amd64.tar.bz2 // 下载1804最小系统镜像
+	holobuilder download --crosstool --id toolchain/x86_64/gcc-7.5.0.tar.bz2
+	holobuilder download --crosstool --id package/x86_64/MDC610-X86-1.1801.005-B1800100T2.B010.tar.bz2 // 下载x86版本CM中间件
+	holobuilder download --crosstool --id package/tools/mdc610/MDC_Development_Studio-Ubuntu18-2.0.011-T.tar.bz2 //下载MDC工具
+	holobuilder download --crosstool --id package/tools/cmake/toolchain_files.tar.bz2  //下载cmake交叉编译脚本
+运行
+    1. cm通信需要有固定的192.168.10.6的IP，保证上网功能且能使用cm通信的配置方式有如下两种，任选其一，不可都操作会冲突。
+	方法一：ifconfig -a获取当前网卡信息，以我电脑为例，获取网卡名称为ens33，然后执行指令
+	sudo ifconfig ens33:1 192.168.10.6 netmask 255.255.255.0 up
+	执行之后可以通过ifconfig命令确认已经有192.168.10.6的ip即可。
+    2. 在crosstool/package/x86_64/MDC610-X86-1.1801.005-B1800100T2.B010/mdc_platform/bin目录下运行
+	# 1.设置环境变量 LD_LIBRARY_PATH
+	  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${crosstool_root}/package/x86_64/MDC610-X86-1.1801.005-B1800100T2.B010/mdc_platform/lib
+	# 2.启动通行中间节点，相当于之前的roscore
+	  ./maintaind
+	  (#不需要通过rtf工具查看消息内容请跳过此步骤
+	  cd ~
+	  ln -s ${workspace}/output/x86_64_ubuntu-18.04-mdc610-0228/debug/target/share/mdc_manifest/outputcfg/DataType/ msg
+	  ./maintaind -p ~/msg)
+    3. 运行相关程序，在$HOLO_ROOT目录下      // 说明：如果在MDC610上运行程序，上面步骤都不需要执行，仅执行此第3步即可
+	# 1.设置环境变量 LD_LIBRARY_PATH--在mdc上执行不需要设置LD_LIBRARY_PATH环境变量
+	  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${crosstool_root}/package/x86_64/MDC610-X86-1.1801.005-B1800100T2.B010/mdc_platform/lib
+	# 2.设置环境变量 CM_CONFIG_FILE_PATH，指向节点对应的特定路径
+	  export CM_CONFIG_FILE_PATH=share/mdc_manifest/outputcfg/Host0DpMachine/HoloPCControl/HoloPCControl/
+	# 3.启动节点
+	  ./bin/mdc_cm/HoloPCControl
+
+
+CM提供的一些工具：		// 在 crosstool/package/x86_64/MDC610-X86-1.1801.005-B1800100T2.B010/mdc_platform/bin 除了上面说到的中间节点，还有一些其他的工具
+	1. rtfbag：相当于之前的rosbag，是数据记录和回放的一种工具。
+		rtfbag record -a	// 记录所有的topic
+		rftbag play xxx.bag	// 播放某个bag
+	2. rtfevent: 相当于之前的rostopic
+		rtfevent list		// 查询当前可以查看的消息
+		rtfevent  hz +消息	// 查看消息频率
+		rtfevent echo +消息	// 查看消息内容--
+1.设置LD_LIBRARY_PATH
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${crosstool_root}/package/x86_64/MDC_X86-1.1801.006-B1800100T2-Ubuntu18-gcc-dev/mdc_platform/lib
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
